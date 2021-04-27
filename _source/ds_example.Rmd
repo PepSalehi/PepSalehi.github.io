@@ -1,0 +1,241 @@
+---
+title: "A relatively straightforward example of a take home data assignment"
+author: "Peyman Noursalehi"
+output:
+  md_document:
+    variant: gfm
+    preserve_yaml: TRUE
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../_posts") })
+date: 2020-09-28
+layout: post
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(jsonlite)
+library(broom)
+library(performance)
+library(forecast)
+
+```
+
+We first use the ``fromJSON`` function of the ``jsonlite`` package to read out data:
+```{r}
+logins <- fromJSON("https://codesignal.s3.amazonaws.com/uploads/1587249037351/logins.json") %>% as_tibble()
+```
+
+Let's extract time features from the login info using ``lubridate``
+```{r}
+df <- logins %>% 
+      transmute(t = as_datetime(value))
+
+# add peak hours?
+df <- df %>% 
+  mutate(hour = hour(t),
+         month = month(t), 
+         day = lubridate::day(t), 
+         week = lubridate::week(t),
+         dow = lubridate::wday(t, label=TRUE, week_start=1),
+         daytype = ifelse(dow %in% c('Sat', 'Sun'), 'weekend', 'weekday'),
+         year = year(t),
+         date = date(t)
+         )
+df
+
+```
+
+The data consists of just login time stamps, so there is not a whole lot of exploratory analysis that we could do. But we do observe that data is for two months in 2012:
+
+```{r}
+df %>% select(year, month) %>% table() %>% print()
+
+```
+
+
+## Question 1
+
+Here is a plot of total daily logins. 
+```{r, warning=FALSE, message=FALSE}
+
+
+logins_per_date <- df %>% group_by(date) %>% summarise(n = n())
+
+logins_per_date %>% 
+    ggplot(aes(x=date, y=n)) + 
+    geom_point() + 
+    geom_line()+
+    theme_bw() + 
+    ylab('Number of logins') +
+    xlab(label = NULL) + 
+    ggtitle("Number of logins per day for March and April 2012") 
+
+```
+
+## Questions 2 & 3
+
+We will fit two linear models to this data (we could easily add higher level polynomials to have a curve, but we skip that for now).
+As a first attempt, we regress the total daily count on the date. 
+```{r}
+# first attempt at a linear model (with no lags)
+m1 <- lm(logins_per_date$n ~ logins_per_date$date)
+# summary(m1)
+m1_tidy <- broom::tidy(m1)
+glance(m1)
+
+logins_per_date %>% 
+  ggplot(aes(x=date, y=n)) + 
+  geom_point() + 
+  geom_line() + 
+  # geom_smooth(method="lm", se=FALSE)+
+  geom_abline(intercept = m1_tidy$estimate[1], slope = m1_tidy$estimate[2]) +
+  theme_bw() + 
+  ylab('Number of logins') +
+  xlab(label = NULL) + 
+  ggtitle("Number of logins per day for March and April 2012") 
+``` 
+There is a lot of room to improve on this model, considering our adjusted $\R^2$ of 0.116.
+
+We next include lagged values of our total daily logins as covariates. In this sense, we are practically estimating an autoregressive model (for this example, ar(3)):
+```{r}
+# fit a linear model with lagged values 
+m2 <- logins_per_date %>% 
+  mutate(l1 = lag(n), 
+         l2 = lag(l1),
+         l3 = lag(l2)) %>% 
+  na.omit() %>% 
+  lm(n ~ ., data = .) 
+```
+We will shortly include  day of the week, month, etc., essentially all the other features that we have already extracted, as covariates, then use feature selection techniques (e.g., step-wise BIC) or regularized linear models (e.g., lasso) to fit our model. But for now, let's see how our model performed. 
+
+This model now shows significant improvement over the previous attempt:
+```{r}
+m2 %>% 
+  glance()
+```
+
+We can look at the estimated parameters to check their statistical significance:
+
+```{r}
+m2 %>% 
+  tidy(conf.int=TRUE) %>% 
+  subset(!term %in% "(Intercept)") %>% 
+  ggplot(aes(
+         x=reorder(term, estimate), 
+         y=estimate, 
+         ymin= conf.low,
+         ymax=conf.high)) + 
+  geom_pointrange() + 
+  geom_hline(yintercept=0, lty=2) +
+  xlab('Coefficients')+
+  ylab('OLS estimate') +
+  coord_flip() +
+  theme_bw() 
+
+```
+It seems that the third lagged count of daily logins is not statistically significant. 
+
+We can also use the ``performance`` package to run a comprehensive diagnostic check on our estimated model:
+
+```{r, message=FALSE, warning=FALSE}
+check_model(m2)
+```
+
+The fit is surprisingly good: the errors are normally distributed around zero, and there is little collinearity between the covariates.  
+There is a lot of variation in the data, as observed by the relatively low $R^2$.
+
+As a side note, we can fit a proper time series model:
+```{r}
+auto.arima(logins_per_date$n)
+```
+and observe that ARIMA(2,1,2) is the best estimate (differencing one time to eliminate the trend), supporting our observation that $l3$ is not needed. But we skip doing full time series analysis for now. 
+
+Now, let's estimate our fully model by adding the other covariates (but skip feature selection for now): 
+```{r}
+m3 <- logins_per_date %>% 
+         mutate(l1 = lag(n), 
+         l2 = lag(l1),
+         l3 = lag(l2),
+         week = lubridate::week(date),
+         dow = lubridate::wday(date, label=TRUE, week_start=1) %>% as.factor()
+  )  %>% 
+  select(-date) %>% 
+  na.omit() %>% 
+  lm(n ~ ., data = .) 
+
+
+```
+
+Looking at how well our model fits the data:
+```{r}
+m3 %>% 
+  glance()
+```
+we have jumped to an adjusted $R^2$ of 0.9, i.e., our model can explain 90% of the variation observed in the data. 
+
+```{r, message=FALSE, warning=FALSE}
+m3 %>% check_model()
+```
+
+There is signiciant collinearity between features extracted from the date, as expected. Otherwise, our errors are still normally distibuted around zero. 
+
+In general, we observe an upward trend in the number of logins per day over the two months. We defer more exploratory analysis to the next question. 
+
+## Question 4:
+First, let's look at the number of logis per day of the week:
+
+```{r}
+
+
+# day of week
+df %>% 
+  group_by(dow) %>% 
+  summarise(n_logins = n()) %>% 
+  mutate(avg = n_logins/sum(n_logins)) %>% 
+  ggplot(aes(dow, n_logins)) +
+  geom_bar(stat = 'identity', fill='midnightblue',alpha=0.7) + 
+  theme_bw()
+```
+
+We have significantly more logins over the weekends. This is expected as many people (pre covid, at least), would go for a night out on the weekends. It might seem that there are more trips on Sunday, which while factually correct, it happens in the early hours as people head back home, as we can see below:
+
+
+```{r}
+
+# hour of day
+
+df %>% 
+  group_by(hour) %>% 
+  summarise(n_logins = n()) %>% 
+  ggplot(aes(hour, n_logins)) +
+  geom_bar(stat = 'identity', fill='midnightblue',alpha=0.7) + 
+  theme_bw() +
+  ylab('Number of logins') +
+  xlab(label = "Hour") 
+
+# more on Sat nights than Friday nights
+df %>% 
+  group_by(dow, hour) %>% 
+  summarise(n_logins = n()) %>% 
+  ggplot(aes(hour, n_logins)) +
+  geom_bar(stat = 'identity', fill='midnightblue',alpha=0.7) + 
+  theme_bw() +
+  ylab('Number of logins') +
+  xlab(label = "Hour") +
+  facet_wrap(~dow)
+```
+
+We note that:
+
+1. There are significantly more logins on the weekends 
+
+2. Saturday nights are more popular than Friday or Sunday nights
+
+3. More trips during the later hours of the day. 
+
+This is an example where data is quite willing to confess, so I will just let it do just that!
