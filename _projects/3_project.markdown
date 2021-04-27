@@ -42,7 +42,14 @@ Figure \ref{fig:NER} gives an example of the Bi-LSTM CRF model. Each sentence is
 Let $$\mathbf{x} = \{x_1, x_2, \dots, x_n\}$$ and $$\mathbf{y} = \{y_1, y_2, \dots, y_n\}$$ denote the input token sequence and their tags, respectively, where each token $x_i \in \mathbb{R}^d$ is represented by a d-dimensional vector. A bidirectional Long Short-Term Memory (Bi-LSTM) then computes two hidden representations $$h_t \in \mathbb{R}^H$$ and $$h'_t \in \mathbb{R}^H$$ of the sentence, capturing the left and right context at each word. The final representation is obtained by concatenating the two, $$\hat{h_t} = [h_t;h'_t]$$, which now effectively possesses a representation of a word in context. 
 Then a linear layer on top of the Bi-LSTM is used to predict the score of each tag for each word $$e_t= tanh(W\hat{h_t})$$.
 
-
+<div class="row justify-content-sm-center">
+    <div class="col-mm mt-6 mt-md-0">
+        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/crf.png' | relative_url }}" alt="" title="example image"/>
+    </div>
+</div>
+<div class="caption">
+   CRF BLSTM for NER
+</div>
 <div class="row justify-content-sm-center">
     <div class="col-mm mt-6 mt-md-0">
         <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/text_pred.png' | relative_url }}" alt="" title="example image"/>
