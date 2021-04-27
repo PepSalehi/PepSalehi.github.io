@@ -1,79 +1,53 @@
 ---
 layout: page
-title: project 3
-description: a project that redirects to another website
+title: Text mining application in transit disruption management
 img: /assets/img/7.jpg
-redirect: https://unsplash.com
 importance: 3
 category: work
 ---
 
-Every project has a beautiful feature showcase page.
-It's easy to include images in a flexible 3-column grid format.
-Make your photos 1/3, 2/3, or full width.
+[Paper](https://ieeexplore.ieee.org/abstract/document/9261594)
+[Code](https://github.com/PepSalehi/NLP_incidents)
 
-To give your project a background in the portfolio page, just add the img tag to the front matter like so:
-
-    ---
-    layout: page
-    title: project
-    description: a project with a background image
-    img: /assets/img/12.jpg
-    ---
+Despite rapid advances in automated text processing, many related tasks in transit and other transportation agencies are still performed manually. For example, incident management reports are often manually processed and subsequently stored in a standardized format for later use. The information contained in such reports can be valuable for many reasons: identification of issues with response actions, underlying causes of each incident, impacts on the system, etc. 
+    In this paper, we develop a comprehensive, pragmatic automated framework for analyzing rail incident reports to  support a wide range of applications and functions, depending on the constraints of the available data. 
+    The objectives are twofold:
+    a) extract information that is required in the standard report forms (automation), and
+    b) extract other useful content and insights from the unstructured text in the original report that would have otherwise been lost/ignored (knowledge discovery). 
+    The approach is demonstrated through a case study involving analysis of 23,728 records of general incidents in the London Underground (LU).
+The results show that it is possible to automatically extract delays, impacts on trains, mitigating strategies, underlying incident causes, and insights related to the potential actions and causes, as well as accurate classification of incidents into predefined categories.
 
 <div class="row">
     <div class="col-sm mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/1.jpg' | relative_url }}" alt="" title="example image"/>
-    </div>
-    <div class="col-sm mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/3.jpg' | relative_url }}" alt="" title="example image"/>
-    </div>
-    <div class="col-sm mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/5.jpg' | relative_url }}" alt="" title="example image"/>
+        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/text_questions.png' | relative_url }}" alt="" title="example image"/>
     </div>
 </div>
 <div class="caption">
-    Caption photos easily. On the left, a road goes through a tunnel. Middle, leaves artistically fall in a hipster photoshoot. Right, in another hipster photoshoot, a lumberjack grasps a handful of pine needles.
+   Typical questions for analysis of incidents
 </div>
+
+In this paper, we use both, knowledge-based and machine learning techniques. Figure below summarizes the information that can be extracted from each incident’s report along with the methods used for each task.
+
 <div class="row">
     <div class="col-sm mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/5.jpg' | relative_url }}" alt="" title="example image"/>
+        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/text_overview.png' | relative_url }}" alt="" title="example image"/>
     </div>
 </div>
 <div class="caption">
-    This image can also have a caption. It's like magic.
+   Overview of the analysis process and methods
 </div>
 
-You can also put regular text between your rows of images.
-Say you wanted to write a little bit about your project before you posted the rest of the images.
-You describe how you toiled, sweated, *bled* for your project, and then... you reveal it's glory in the next row of images.
+
+Figure \ref{fig:NER} gives an example of the Bi-LSTM CRF model. Each sentence is represented as a sequence of tokens, typically labeled with the BIO (beginning, inside, outside) scheme. For example, "Oxford Station" is tagged as "B-station" and "I-station". 
+Let $$\mathbf{x} = \{x_1, x_2, \dots, x_n\}$$ and $$\mathbf{y} = \{y_1, y_2, \dots, y_n\}$$ denote the input token sequence and their tags, respectively, where each token $x_i \in \mathbb{R}^d$ is represented by a d-dimensional vector. A bidirectional Long Short-Term Memory (Bi-LSTM) then computes two hidden representations $$h_t \in \mathbb{R}^H$$ and $$h'_t \in \mathbb{R}^H$$ of the sentence, capturing the left and right context at each word. The final representation is obtained by concatenating the two, $$\hat{h_t} = [h_t;h'_t]$$, which now effectively possesses a representation of a word in context. 
+Then a linear layer on top of the Bi-LSTM is used to predict the score of each tag for each word $$e_t= tanh(W\hat{h_t})$$.
 
 
 <div class="row justify-content-sm-center">
-    <div class="col-sm-8 mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/6.jpg' | relative_url }}" alt="" title="example image"/>
-    </div>
-    <div class="col-sm-4 mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/11.jpg' | relative_url }}" alt="" title="example image"/>
+    <div class="col-mm mt-6 mt-md-0">
+        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/text_pred.png' | relative_url }}" alt="" title="example image"/>
     </div>
 </div>
 <div class="caption">
-    You can also have artistically styled 2/3 + 1/3 images, like these.
+   TABLE I: Prediction accuracy for NERTypic
 </div>
-
-
-The code is simple.
-Just wrap your images with `<div class="col-sm">` and place them inside `<div class="row">` (read more about the <a href="https://getbootstrap.com/docs/4.4/layout/grid/" target="_blank">Bootstrap Grid</a> system).
-To make images responsive, add `img-fluid` class to each; for rounded corners and shadows use `rounded` and `z-depth-1` classes.
-Here's the code for the last row of images above:
-
-```html
-<div class="row justify-content-sm-center">
-    <div class="col-sm-8 mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/6.jpg' | relative_url }}" alt="" title="example image"/>
-    </div>
-    <div class="col-sm-4 mt-3 mt-md-0">
-        <img class="img-fluid rounded z-depth-1" src="{{ '/assets/img/11.jpg' | relative_url }}" alt="" title="example image"/>
-    </div>
-</div>
-```
